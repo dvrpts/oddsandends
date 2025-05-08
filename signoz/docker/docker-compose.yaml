@@ -13,9 +13,9 @@ x-clickhouse-defaults: &clickhouse-defaults
   image: clickhouse/clickhouse-server:24.1.2-alpine
   tty: true
   labels:
-    - signoz.io/scrape=true
-    - signoz.io/port=9363
-    - signoz.io/path=/metrics
+    signoz.io/scrape: "true"
+    signoz.io/port: "9363"
+    signoz.io/path: "/metrics"
   depends_on:
     init-clickhouse:
       condition: service_completed_successfully
@@ -41,9 +41,9 @@ x-zookeeper-defaults: &zookeeper-defaults
   image: bitnami/zookeeper:3.7.1
   user: root
   labels:
-    - signoz.io/scrape=true
-    - signoz.io/port=9141
-    - signoz.io/path=/metrics
+    signoz.io/scrape: "true"
+    signoz.io/port: "9141"
+    signoz.io/path: "/metrics"
   healthcheck:
     test:
       - CMD-SHELL
@@ -77,7 +77,7 @@ services:
         mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
     restart: on-failure
     volumes:
-      - ./signoz/common/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
+      - ../common/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
   zookeeper-1:
     <<: *zookeeper-defaults
     container_name: signoz-zookeeper-1
@@ -101,16 +101,16 @@ services:
     #   - "8123:8123"
     #   - "9181:9181"
     volumes:
-      - ./signoz/common/clickhouse/config.xml:/etc/clickhouse-server/config.xml
-      - ./signoz/common/clickhouse/users.xml:/etc/clickhouse-server/users.xml
-      - ./signoz/common/clickhouse/custom-function.xml:/etc/clickhouse-server/custom-function.xml
-      - ./signoz/common/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
-      - ./signoz/common/clickhouse/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
+      - ../common/clickhouse/config.xml:/etc/clickhouse-server/config.xml
+      - ../common/clickhouse/users.xml:/etc/clickhouse-server/users.xml
+      - ../common/clickhouse/custom-function.xml:/etc/clickhouse-server/custom-function.xml
+      - ../common/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
+      - ../common/clickhouse/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
       - clickhouse:/var/lib/clickhouse/
       # - ../common/clickhouse/storage.xml:/etc/clickhouse-server/config.d/storage.xml
   signoz:
     <<: *db-depend
-    image: signoz/signoz:${VERSION:-v0.77.0}
+    image: signoz/signoz:${VERSION:-v0.81.0}
     container_name: signoz
     command:
       - --config=/root/config/prometheus.yml
@@ -120,8 +120,8 @@ services:
       - "8080:8080" # signoz port
     #   - "6060:6060"     # pprof port
     volumes:
-      - ./signoz/common/signoz/prometheus.yml:/root/config/prometheus.yml
-      - ./signoz/common/dashboards:/root/config/dashboards
+      - ../common/signoz/prometheus.yml:/root/config/prometheus.yml
+      - ../common/dashboards:/root/config/dashboards
       - sqlite:/var/lib/signoz/
     environment:
       - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
@@ -144,7 +144,7 @@ services:
       retries: 3
   otel-collector:
     <<: *db-depend
-    image: signoz/signoz-otel-collector:${OTELCOL_TAG:-v0.111.37}
+    image: signoz/signoz-otel-collector:${OTELCOL_TAG:-v0.111.40}
     container_name: signoz-otel-collector
     command:
       - --config=/etc/otel-collector-config.yaml
@@ -152,8 +152,8 @@ services:
       - --copy-path=/var/tmp/collector-config.yaml
       - --feature-gates=-pkg.translator.prometheus.NormalizeName
     volumes:
-      - ./docker/otel-collector-config.yaml:/etc/otel-collector-config.yaml
-      - ./signoz/common/signoz/otel-collector-opamp-config.yaml:/etc/manager-config.yaml
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - ../common/signoz/otel-collector-opamp-config.yaml:/etc/manager-config.yaml
     environment:
       - OTEL_RESOURCE_ATTRIBUTES=host.name=signoz-host,os.type=linux
       - LOW_CARDINAL_EXCEPTION_GROUPING=false
@@ -166,7 +166,7 @@ services:
         condition: service_healthy
   schema-migrator-sync:
     <<: *common
-    image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.111.37}
+    image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.111.40}
     container_name: schema-migrator-sync
     command:
       - sync
@@ -178,7 +178,7 @@ services:
     restart: on-failure
   schema-migrator-async:
     <<: *db-depend
-    image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.111.37}
+    image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.111.40}
     container_name: schema-migrator-async
     command:
       - async
